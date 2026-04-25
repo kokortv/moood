@@ -1,6 +1,6 @@
 {
   "name": "Мой дневник настроения",
-  "short_name": "Настроение",
+  "short_name": "moood",
   "start_url": "/moood/",
   "scope": "/moood/",
   "display": "standalone",
