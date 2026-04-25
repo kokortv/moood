@@ -76,11 +76,17 @@
 		.streak-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; }
 		.streak-num { font-family: 'Unbounded', sans-serif; font-size: 22px; background: linear-gradient(135deg, #ff9f43, #ff6a9e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 		.loc-row { margin-bottom: 14px; min-height: 36px; }
-		.modal-cloud { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 1000; display: flex; align-items: center; justify-content: center; visibility: hidden; opacity: 0; transition: 0.3s; }
-		.modal-cloud.active { visibility: visible; opacity: 1; }
-		.cloud-modal-content { width: 90%; max-width: 500px; height: 70vh; background: rgba(30,30,42,0.9); border-radius: 48px; position: relative; overflow: hidden; border: 1px solid rgba(124,106,255,0.3); box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+		.modal-cloud { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; visibility: hidden; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+		.modal-cloud.active { visibility: visible; opacity: 1; pointer-events: all; }
+		/* editModal использует свои inline-стили — не трогаем */
+		#cloudModal { background: var(--bg); }
+		#cloudModal .cloud-modal-content { position: absolute; inset: 0; }
+		.cloud-header { position: absolute; top: 0; left: 0; right: 0; z-index: 10; padding: 52px 24px 20px; display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(to bottom, var(--bg) 60%, transparent); pointer-events: none; }
+		.cloud-title { font-family: 'Unbounded', sans-serif; font-size: 18px; font-weight: 600; }
+		.cloud-title span { font-size: 11px; display: block; color: var(--muted); font-weight: 400; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
+		.cloud-close-btn { position: relative; background: var(--surface2); border: 1px solid var(--border); color: white; font-size: 18px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; pointer-events: all; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 		.cloud-close { position: absolute; top: 16px; right: 20px; background: var(--surface2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 30px; cursor: pointer; z-index: 10; backdrop-filter: blur(4px); }
-		.cloud-canvas { position: relative; width: 100%; height: 100%; overflow: hidden; }
+		.cloud-canvas { position: absolute; inset: 0; overflow: hidden; }
 		.floating-emoji { position: absolute; user-select: none; pointer-events: none; will-change: transform; transition: none; }
 		@keyframes emojiBreathe { 0%,100% { filter: drop-shadow(0 0 16px rgba(124,106,255,0.35)); transform: scale(1); } 50% { filter: drop-shadow(0 0 32px rgba(124,106,255,0.7)); transform: scale(1.06); } }
 		.emoji-slide.active .em { animation: emojiPop 0.4s cubic-bezier(0.34,1.56,0.64,1), emojiBreathe 3s ease-in-out 0.4s infinite; }
