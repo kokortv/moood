@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
 	<title>Настроение</title>
-	<link rel="manifest" href="?resource=manifest.webmanifest">
+	<link rel="manifest" href="./manifest.json">
 	<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%237c6aff'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white'%3E😊%3C/text%3E%3C/svg%3E">
 	<meta name="theme-color" content="#7c6aff">
 	<style>
@@ -307,11 +307,11 @@
 		updateNetworkStatus();
 
 		// ========== LOCATION ==========
-		function setLocation(coords) {
-			currentLocation = coords; // "lat,lng"
+		function setLocation(loc) {
+			currentLocation = loc;
 			var row = document.getElementById('loc-row');
 			if (!row) return;
-			row.innerHTML = '<div class="loc-pill">📍 <span class="loc-text">' + escapeHtml(coords) + '</span> <button class="loc-clear" id="locRefreshBtn">↻</button> <button class="loc-clear" id="locClearBtn">✕</button></div>';
+			row.innerHTML = '<div class="loc-pill">📍 <span class="loc-text">' + escapeHtml(loc.label) + '</span> <button class="loc-clear" id="locRefreshBtn">↻</button> <button class="loc-clear" id="locClearBtn">✕</button></div>';
 			var refreshBtn = document.getElementById('locRefreshBtn');
 			var clearBtn = document.getElementById('locClearBtn');
 			if (refreshBtn) refreshBtn.addEventListener('click', retryLocation);
@@ -330,15 +330,27 @@
 			if (!navigator.geolocation) return;
 			var row = document.getElementById('loc-row');
 			if (!row) return;
-			row.innerHTML = '<div class="loc-btn loading">⏳ Определяю...</div>';
+			row.innerHTML = '<div class="loc-btn loading">⏳ Определяю место...</div>';
 			navigator.geolocation.getCurrentPosition(
 				function(pos) {
-					var lat = pos.coords.latitude.toFixed(6);
-					var lng = pos.coords.longitude.toFixed(6);
-					setLocation(lat + ',' + lng);
+					var lat = pos.coords.latitude, lng = pos.coords.longitude;
+					fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&accept-language=ru&zoom=18')
+						.then(function(r) { return r.json(); })
+						.then(function(d) {
+							var a = d.address || {};
+							var place = a.amenity || a.shop || a.cafe || a.restaurant || a.tourism || a.leisure || '';
+							var street = a.road ? (a.road + (a.house_number ? ', ' + a.house_number : '')) : '';
+							var district = a.neighbourhood || a.suburb || a.quarter || '';
+							var city = a.city || a.town || a.village || a.county || '';
+							var parts = [place, street || district, city].filter(Boolean);
+							var label = parts.slice(0, 2).join(', ') || (d.display_name ? d.display_name.split(',').slice(0, 2).join(',') : lat.toFixed(5) + ',' + lng.toFixed(5));
+							setLocation({ coords: lat.toFixed(5) + ',' + lng.toFixed(5), label: label });
+						})
+						.catch(function() {
+							setLocation({ coords: lat.toFixed(5) + ',' + lng.toFixed(5), label: lat.toFixed(3) + ',' + lng.toFixed(3) });
+						});
 				},
-				function() { row.innerHTML = ''; },
-				{ timeout: 10000, maximumAge: 120000, enableHighAccuracy: true }
+				function() { row.innerHTML = ''; }
 			);
 		}
 
@@ -392,11 +404,7 @@
 			if (entryId) el.setAttribute('data-id', entryId);
 			var date = item.date;
 			if (date instanceof Date) date = date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-			var locHtml = '';
-			if (item.location) {
-				var mapsUrl = 'https://maps.google.com/?q=' + encodeURIComponent(item.location);
-				locHtml = '<div class="h-loc"><a href="' + mapsUrl + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">' + escapeHtml(item.location) + '</a></div>';
-			}
+			var locHtml = item.location ? '<div class="h-loc">' + escapeHtml(item.location) + '</div>' : '';
 			el.innerHTML = '<div class="h-emoji">' + escapeHtml(item.emoji) + '</div>' +
 				'<div class="h-content">' +
 				'<div class="h-date">' + escapeHtml(date) + '</div>' +
@@ -491,7 +499,7 @@
 			var emoji = MOODS[cur].emoji;
 			var comment = commentField ? commentField.value.trim() : '';
 			var date = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-			var location = currentLocation || '';
+			var location = currentLocation ? currentLocation.label : '';
 			var entry = { emoji: emoji, comment: comment, date: date, location: location };
 
 			clearCommentDraft();
