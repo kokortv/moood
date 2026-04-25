@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
 	<title>Настроение</title>
-	<link rel="manifest" href="?resource=manifest.webmanifest">
+	<link rel="manifest" href="./manifest.webmanifest">
 	<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%237c6aff'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white'%3E😊%3C/text%3E%3C/svg%3E">
 	<meta name="theme-color" content="#7c6aff">
 	<style>
@@ -158,7 +158,10 @@
 <!-- Модалка облака настроений -->
 <div id="cloudModal" class="modal-cloud">
 	<div class="cloud-modal-content">
-		<button class="cloud-close" id="closeCloudBtn">✕</button>
+		<div class="cloud-header">
+			<div class="cloud-title">Эмоции месяца<span id="cloud-subtitle">последние 30 дней</span></div>
+			<button class="cloud-close" id="closeCloudBtn">✕</button>
+		</div>
 		<div id="cloudCanvas" class="cloud-canvas"></div>
 	</div>
 </div>
@@ -615,11 +618,17 @@
 				cloudModal.classList.add('active');
 				return;
 			}
-			var width = cloudCanvas.clientWidth;
-			var height = cloudCanvas.clientHeight;
-			if (width === 0 || height === 0) { setTimeout(openCloudModal, 100); return; }
+			// subtitle count
+			var totalCount = 0; for (var ek in freq) totalCount += freq[ek];
+			var sub = document.getElementById('cloud-subtitle');
+			if (sub) { var w=totalCount%10,h=totalCount%100; sub.textContent=totalCount+' '+(w===1&&h!==11?'запись':w>=2&&w<=4&&(h<10||h>=20)?'записи':'записей')+' за 30 дней'; }
+			document.body.style.overflow = 'hidden';
+			cloudModal.classList.add('active');
+			var width = window.innerWidth;
+			var height = window.innerHeight;
 			var emojis = Object.keys(freq).sort(function(a,b){return freq[b]-freq[a];});
-			var padding = 12;
+			var padding = 20;
+			var topPad = 110;
 			var placed = [];
 			function overlaps(cx, cy, r) {
 				for (var p = 0; p < placed.length; p++) {
@@ -632,19 +641,19 @@
 				var em = emojis[i];
 				var count = freq[em];
 				var ratio = count / maxCount;
-				var size = Math.round(26 + Math.sqrt(ratio) * 62);
+				var size = Math.round(30 + Math.sqrt(ratio) * 78);
 				var r = size * 0.55;
 				var opacity = 0.35 + ratio * 0.65;
 				var blur = Math.round((1 - ratio) * 2.5 * 10) / 10;
 				var cx, cy, found = false;
-				var cx0 = width / 2, cy0 = height / 2;
+				var cx0 = width / 2, cy0 = topPad + (height - topPad) / 2;
 				for (var attempt = 0; attempt < 300; attempt++) {
 					var angle = attempt * 2.4;
-					var rad = (attempt / 300) * Math.min(width, height) * 0.42;
+					var rad = (attempt / 300) * Math.min(width, height - topPad) * 0.46;
 					cx = cx0 + rad * Math.cos(angle);
 					cy = cy0 + rad * Math.sin(angle);
 					if (cx - r < padding || cx + r > width - padding) continue;
-					if (cy - r < padding || cy + r > height - padding) continue;
+					if (cy - r < topPad || cy + r > height - padding) continue;
 					if (!overlaps(cx, cy, r)) { found = true; break; }
 				}
 				if (!found) continue;
@@ -674,9 +683,8 @@
 				div.style.animation = keyName + ' ' + duration + 's ' + delay + 's ease-in-out infinite';
 				cloudCanvas.appendChild(div);
 			}
-			cloudModal.classList.add('active');
 		}
-		function closeCloudModal() { cloudModal.classList.remove('active'); cloudCanvas.innerHTML = ''; }
+		function closeCloudModal() { cloudModal.classList.remove('active'); cloudCanvas.innerHTML = ''; document.body.style.overflow = ''; }
 		cloudBtn.addEventListener('click', openCloudModal);
 		closeCloudBtn.addEventListener('click', closeCloudModal);
 		cloudModal.addEventListener('click', function(e) { if (e.target === cloudModal) closeCloudModal(); });
