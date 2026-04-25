@@ -158,20 +158,25 @@
 </div>
 
 <script>
-	function safeRun(method, args, onSuccess, onFailure) {
-		try {
-			if (typeof google === 'undefined' || !google.script || !google.script.run) {
-				if (onFailure) setTimeout(function() { onFailure(new Error('offline')); }, 0);
-				return;
-			}
-			var r = google.script.run;
-			if (onSuccess) r = r.withSuccessHandler(onSuccess);
-			if (onFailure) r = r.withFailureHandler(onFailure);
-			r[method].apply(r, args || []);
-		} catch(e) {
-			if (onFailure) setTimeout(function() { onFailure(e); }, 0);
-		}
+	// URL твоего Apps Script WebApp — вставь после деплоя
+	var API_URL = 'https://script.google.com/macros/s/AKfycbzJSXqYu7KW5euWznmHEtU41mIQ2poHNcTaYjBiM1chp-nJA0G_vYcg1uNxvs8Ih3J4zg/exec';
+
+	function apiGet(action) {
+		return fetch(API_URL + '?action=' + action)
+			.then(function(r) { return r.json(); })
+			.catch(function() { return null; });
 	}
+
+	function apiPost(body) {
+		return fetch(API_URL, {
+			method: 'POST',
+			headers: { 'Content-Type': 'text/plain' },
+			body: JSON.stringify(body)
+		})
+			.then(function(r) { return r.json(); })
+			.catch(function() { return null; });
+	}
+
 	(function() {
 		// ========== MOODS ==========
 		var MOODS = [
@@ -440,8 +445,8 @@
 				if (!currentEditId) return;
 				if (!navigator.onLine) { showToast('Нет интернета, изменения будут после подключения'); closeEditModal(); return; }
 				var newComment = editCommentEl.value.trim();
-				safeRun('updateEntry', [currentEditId, newComment],
-					function(res) {
+				apiPost({ action: 'update', id: currentEditId, comment: newComment })
+					.then(function(res) {
 						if (res && res.success) {
 							showToast('Обновлено');
 							for (var i = 0; i < fullHistory.length; i++) {
@@ -453,9 +458,8 @@
 							renderHistoryItems();
 						} else showToast('Ошибка');
 						closeEditModal();
-					},
-					function() { showToast('Ошибка соединения'); closeEditModal(); }
-				);
+					})
+					.catch(function() { showToast('Ошибка соединения'); closeEditModal(); });
 			});
 		}
 		if (document.getElementById('cancelEditBtn')) document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
@@ -463,8 +467,8 @@
 		function deleteEntryById(id, rowElement) {
 			if (!navigator.onLine) { showToast('Нет интернета, удаление доступно только онлайн'); return; }
 			if (!confirm('Удалить запись?')) return;
-			safeRun('deleteEntry', [id],
-				function(res) {
+			apiPost({ action: 'delete', id: id })
+				.then(function(res) {
 					if (res && res.success) {
 						for (var i = 0; i < fullHistory.length; i++) {
 							if (fullHistory[i][0] === id) { fullHistory.splice(i, 1); break; }
@@ -472,9 +476,8 @@
 						renderHistoryItems();
 						showToast('Запись удалена');
 					} else showToast('Ошибка');
-				},
-				function() { showToast('Ошибка удаления'); }
-			);
+				})
+				.catch(function() { showToast('Ошибка удаления'); });
 		}
 
 		// ========== SAVE & OFFLINE QUEUE ==========
@@ -498,8 +501,8 @@
 			saveBtn.textContent = 'Сохраняю...';
 
 			if (navigator.onLine) {
-				safeRun('saveDataToSheet', [emoji, comment, null, location],
-					function(res) {
+				apiPost({ action: 'save', emoji: emoji, comment: comment, date: null, location: location })
+					.then(function(res) {
 						saveBtn.disabled = false;
 						saveBtn.textContent = 'Зафиксировать момент';
 						if (res && res.success) {
@@ -508,18 +511,17 @@
 							addNewEntryToTop(entry, false, res.id);
 							allHistoryData = fullHistory;
 						} else showToast('Ошибка');
-					},
-					function() {
+					})
+					.catch(function() {
 						saveBtn.disabled = false;
 						saveBtn.textContent = 'Зафиксировать момент';
-						showToast('Ошибка, сохранено локально');
+						showToast('Сохранено локально');
 						var q = JSON.parse(localStorage.getItem('moodQueue') || '[]');
 						q.push(entry);
 						localStorage.setItem('moodQueue', JSON.stringify(q));
 						addNewEntryToTop(entry, true, null);
 						updateStreak();
-					}
-				);
+					});
 			} else {
 				var q = JSON.parse(localStorage.getItem('moodQueue') || '[]');
 				q.push(entry);
@@ -539,8 +541,8 @@
 			if (!queue.length) return;
 			netBadge.textContent = 'Синхр...';
 			var entry = queue[0];
-			safeRun('saveDataToSheet', [entry.emoji, entry.comment, entry.date, entry.location || ''],
-				function(res) {
+			apiPost({ action: 'save', emoji: entry.emoji, comment: entry.comment, date: entry.date, location: entry.location || '' })
+				.then(function(res) {
 					if (res && res.success) {
 						queue.shift();
 						localStorage.setItem('moodQueue', JSON.stringify(queue));
@@ -550,12 +552,11 @@
 						netBadge.textContent = 'Online';
 						netBadge.className = 'net-badge';
 					}
-				},
-				function() {
+				})
+				.catch(function() {
 					netBadge.textContent = 'Online';
 					netBadge.className = 'net-badge';
-				}
-			);
+				});
 		}
 
 		// ========== STREAK ==========
@@ -687,25 +688,25 @@
 				renderHistoryItems();
 				showToast('Не удалось загрузить данные с сервера');
 			}, 3000);
-			safeRun('getInitialData', [],
-				function(data) {
+			apiGet('getData')
+				.then(function(data) {
 					clearTimeout(timeout);
+					if (!data) throw new Error('no data');
 					if (userNameSpan) userNameSpan.textContent = data.name || 'друг';
 					setFullHistory(data.history || []);
 					syncOffline();
-				},
-				function() {
+				})
+				.catch(function() {
 					clearTimeout(timeout);
 					if (userNameSpan) userNameSpan.textContent = 'друг';
 					setFullHistory([]);
-					showToast('Не удалось загрузить данные с сервера');
-				}
-			);
+					showToast('Не удалось загрузить данные');
+				});
 		}
 
 		// ========== SERVICE WORKER REGISTRATION ==========
-		if ('serviceWorker' in navigator && navigator.onLine) {
-			navigator.serviceWorker.register('?resource=sw.js').catch(function(e) { console.log('SW registration failed', e); });
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('./sw.js').catch(function(e) { console.log('SW:', e); });
 		}
 
 		// ========== START ==========
