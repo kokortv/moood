@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
 	<title>Настроение</title>
-	<link rel="manifest" href="./manifest.webmanifest">
+	<link rel="manifest" href="?resource=manifest.webmanifest">
 	<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%237c6aff'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white'%3E😊%3C/text%3E%3C/svg%3E">
 	<meta name="theme-color" content="#7c6aff">
 	<style>
@@ -81,11 +81,11 @@
 		/* editModal использует свои inline-стили — не трогаем */
 		#cloudModal { background: var(--bg); }
 		#cloudModal .cloud-modal-content { position: absolute; inset: 0; }
-		.cloud-header { position: absolute; top: 0; left: 0; right: 0; z-index: 10; padding: 52px 24px 20px; display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(to bottom, var(--bg) 60%, transparent); pointer-events: none; }
+		.cloud-header { position: absolute; top: 0; left: 0; right: 0; z-index: 15; padding: 52px 24px 20px; display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(to bottom, var(--bg) 60%, transparent); pointer-events: none; }
 		.cloud-title { font-family: 'Unbounded', sans-serif; font-size: 18px; font-weight: 600; }
 		.cloud-title span { font-size: 11px; display: block; color: var(--muted); font-weight: 400; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
 		.cloud-close-btn { position: relative; background: var(--surface2); border: 1px solid var(--border); color: white; font-size: 18px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; pointer-events: all; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-		.cloud-close { position: absolute; top: 16px; right: 20px; background: var(--surface2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 30px; cursor: pointer; z-index: 10; backdrop-filter: blur(4px); }
+		.cloud-close { position: relative; background: var(--surface2); border: 1px solid var(--border); color: white; font-size: 18px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; pointer-events: all !important; flex-shrink: 0; display: flex; align-items: center; justify-content: center; z-index: 20; }
 		.cloud-canvas { position: absolute; inset: 0; overflow: hidden; }
 		.floating-emoji { position: absolute; user-select: none; pointer-events: none; will-change: transform; transition: none; }
 		@keyframes emojiBreathe { 0%,100% { filter: drop-shadow(0 0 16px rgba(124,106,255,0.35)); transform: scale(1); } 50% { filter: drop-shadow(0 0 32px rgba(124,106,255,0.7)); transform: scale(1.06); } }
@@ -158,10 +158,7 @@
 <!-- Модалка облака настроений -->
 <div id="cloudModal" class="modal-cloud">
 	<div class="cloud-modal-content">
-		<div class="cloud-header">
-			<div class="cloud-title">Эмоции месяца<span id="cloud-subtitle">последние 30 дней</span></div>
-			<button class="cloud-close" id="closeCloudBtn">✕</button>
-		</div>
+		<button class="cloud-close" id="closeCloudBtn">✕</button>
 		<div id="cloudCanvas" class="cloud-canvas"></div>
 	</div>
 </div>
@@ -618,17 +615,11 @@
 				cloudModal.classList.add('active');
 				return;
 			}
-			// subtitle count
-			var totalCount = 0; for (var ek in freq) totalCount += freq[ek];
-			var sub = document.getElementById('cloud-subtitle');
-			if (sub) { var w=totalCount%10,h=totalCount%100; sub.textContent=totalCount+' '+(w===1&&h!==11?'запись':w>=2&&w<=4&&(h<10||h>=20)?'записи':'записей')+' за 30 дней'; }
-			document.body.style.overflow = 'hidden';
-			cloudModal.classList.add('active');
-			var width = window.innerWidth;
-			var height = window.innerHeight;
+			var width = cloudCanvas.clientWidth;
+			var height = cloudCanvas.clientHeight;
+			if (width === 0 || height === 0) { setTimeout(openCloudModal, 100); return; }
 			var emojis = Object.keys(freq).sort(function(a,b){return freq[b]-freq[a];});
-			var padding = 20;
-			var topPad = 110;
+			var padding = 12;
 			var placed = [];
 			function overlaps(cx, cy, r) {
 				for (var p = 0; p < placed.length; p++) {
@@ -641,19 +632,19 @@
 				var em = emojis[i];
 				var count = freq[em];
 				var ratio = count / maxCount;
-				var size = Math.round(30 + Math.sqrt(ratio) * 78);
+				var size = Math.round(26 + Math.sqrt(ratio) * 62);
 				var r = size * 0.55;
 				var opacity = 0.35 + ratio * 0.65;
 				var blur = Math.round((1 - ratio) * 2.5 * 10) / 10;
 				var cx, cy, found = false;
-				var cx0 = width / 2, cy0 = topPad + (height - topPad) / 2;
+				var cx0 = width / 2, cy0 = height / 2;
 				for (var attempt = 0; attempt < 300; attempt++) {
 					var angle = attempt * 2.4;
-					var rad = (attempt / 300) * Math.min(width, height - topPad) * 0.46;
+					var rad = (attempt / 300) * Math.min(width, height) * 0.42;
 					cx = cx0 + rad * Math.cos(angle);
 					cy = cy0 + rad * Math.sin(angle);
 					if (cx - r < padding || cx + r > width - padding) continue;
-					if (cy - r < topPad || cy + r > height - padding) continue;
+					if (cy - r < padding || cy + r > height - padding) continue;
 					if (!overlaps(cx, cy, r)) { found = true; break; }
 				}
 				if (!found) continue;
@@ -683,6 +674,7 @@
 				div.style.animation = keyName + ' ' + duration + 's ' + delay + 's ease-in-out infinite';
 				cloudCanvas.appendChild(div);
 			}
+			cloudModal.classList.add('active');
 		}
 		function closeCloudModal() { cloudModal.classList.remove('active'); cloudCanvas.innerHTML = ''; document.body.style.overflow = ''; }
 		cloudBtn.addEventListener('click', openCloudModal);
