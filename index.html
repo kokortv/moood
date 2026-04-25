@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-	<title>moood</title>
+	<title>Настроение</title>
 	<link rel="manifest" href="?resource=manifest.webmanifest">
 	<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%237c6aff'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white'%3E😊%3C/text%3E%3C/svg%3E">
 	<meta name="theme-color" content="#7c6aff">
@@ -81,11 +81,11 @@
 		/* editModal использует свои inline-стили — не трогаем */
 		#cloudModal { background: var(--bg); }
 		#cloudModal .cloud-modal-content { position: absolute; inset: 0; }
-		.cloud-header { position: absolute; top: 0; left: 0; right: 0; z-index: 15; padding: 52px 24px 20px; display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(to bottom, var(--bg) 60%, transparent); pointer-events: none; }
+		.cloud-header { position: absolute; top: 0; left: 0; right: 0; z-index: 10; padding: 52px 24px 20px; display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(to bottom, var(--bg) 60%, transparent); pointer-events: none; }
 		.cloud-title { font-family: 'Unbounded', sans-serif; font-size: 18px; font-weight: 600; }
 		.cloud-title span { font-size: 11px; display: block; color: var(--muted); font-weight: 400; letter-spacing: 1px; margin-top: 4px; text-transform: uppercase; }
 		.cloud-close-btn { position: relative; background: var(--surface2); border: 1px solid var(--border); color: white; font-size: 18px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; pointer-events: all; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-		.cloud-close { position: relative; background: var(--surface2); border: 1px solid var(--border); color: white; font-size: 18px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; pointer-events: all !important; flex-shrink: 0; display: flex; align-items: center; justify-content: center; z-index: 20; }
+		.cloud-close { position: absolute; top: 16px; right: 20px; background: var(--surface2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 30px; cursor: pointer; z-index: 10; backdrop-filter: blur(4px); }
 		.cloud-canvas { position: absolute; inset: 0; overflow: hidden; }
 		.floating-emoji { position: absolute; user-select: none; pointer-events: none; will-change: transform; transition: none; }
 		@keyframes emojiBreathe { 0%,100% { filter: drop-shadow(0 0 16px rgba(124,106,255,0.35)); transform: scale(1); } 50% { filter: drop-shadow(0 0 32px rgba(124,106,255,0.7)); transform: scale(1.06); } }
@@ -307,11 +307,11 @@
 		updateNetworkStatus();
 
 		// ========== LOCATION ==========
-		function setLocation(loc) {
-			currentLocation = loc;
+		function setLocation(coords) {
+			currentLocation = coords; // "lat,lng"
 			var row = document.getElementById('loc-row');
 			if (!row) return;
-			row.innerHTML = '<div class="loc-pill">📍 <span class="loc-text">' + escapeHtml(loc.label) + '</span> <button class="loc-clear" id="locRefreshBtn">↻</button> <button class="loc-clear" id="locClearBtn">✕</button></div>';
+			row.innerHTML = '<div class="loc-pill">📍 <span class="loc-text">' + escapeHtml(coords) + '</span> <button class="loc-clear" id="locRefreshBtn">↻</button> <button class="loc-clear" id="locClearBtn">✕</button></div>';
 			var refreshBtn = document.getElementById('locRefreshBtn');
 			var clearBtn = document.getElementById('locClearBtn');
 			if (refreshBtn) refreshBtn.addEventListener('click', retryLocation);
@@ -330,27 +330,15 @@
 			if (!navigator.geolocation) return;
 			var row = document.getElementById('loc-row');
 			if (!row) return;
-			row.innerHTML = '<div class="loc-btn loading">⏳ Определяю место...</div>';
+			row.innerHTML = '<div class="loc-btn loading">⏳ Определяю...</div>';
 			navigator.geolocation.getCurrentPosition(
 				function(pos) {
-					var lat = pos.coords.latitude, lng = pos.coords.longitude;
-					fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&accept-language=ru&zoom=18')
-						.then(function(r) { return r.json(); })
-						.then(function(d) {
-							var a = d.address || {};
-							var place = a.amenity || a.shop || a.cafe || a.restaurant || a.tourism || a.leisure || '';
-							var street = a.road ? (a.road + (a.house_number ? ', ' + a.house_number : '')) : '';
-							var district = a.neighbourhood || a.suburb || a.quarter || '';
-							var city = a.city || a.town || a.village || a.county || '';
-							var parts = [place, street || district, city].filter(Boolean);
-							var label = parts.slice(0, 2).join(', ') || (d.display_name ? d.display_name.split(',').slice(0, 2).join(',') : lat.toFixed(5) + ',' + lng.toFixed(5));
-							setLocation({ coords: lat.toFixed(5) + ',' + lng.toFixed(5), label: label });
-						})
-						.catch(function() {
-							setLocation({ coords: lat.toFixed(5) + ',' + lng.toFixed(5), label: lat.toFixed(3) + ',' + lng.toFixed(3) });
-						});
+					var lat = pos.coords.latitude.toFixed(6);
+					var lng = pos.coords.longitude.toFixed(6);
+					setLocation(lat + ',' + lng);
 				},
-				function() { row.innerHTML = ''; }
+				function() { row.innerHTML = ''; },
+				{ timeout: 10000, maximumAge: 120000, enableHighAccuracy: true }
 			);
 		}
 
@@ -404,7 +392,11 @@
 			if (entryId) el.setAttribute('data-id', entryId);
 			var date = item.date;
 			if (date instanceof Date) date = date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-			var locHtml = item.location ? '<div class="h-loc">' + escapeHtml(item.location) + '</div>' : '';
+			var locHtml = '';
+			if (item.location) {
+				var mapsUrl = 'https://maps.google.com/?q=' + encodeURIComponent(item.location);
+				locHtml = '<div class="h-loc"><a href="' + mapsUrl + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">' + escapeHtml(item.location) + '</a></div>';
+			}
 			el.innerHTML = '<div class="h-emoji">' + escapeHtml(item.emoji) + '</div>' +
 				'<div class="h-content">' +
 				'<div class="h-date">' + escapeHtml(date) + '</div>' +
@@ -499,7 +491,7 @@
 			var emoji = MOODS[cur].emoji;
 			var comment = commentField ? commentField.value.trim() : '';
 			var date = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-			var location = currentLocation ? currentLocation.label : '';
+			var location = currentLocation || '';
 			var entry = { emoji: emoji, comment: comment, date: date, location: location };
 
 			clearCommentDraft();
@@ -676,7 +668,7 @@
 			}
 			cloudModal.classList.add('active');
 		}
-		function closeCloudModal() { cloudModal.classList.remove('active'); cloudCanvas.innerHTML = ''; document.body.style.overflow = ''; }
+		function closeCloudModal() { cloudModal.classList.remove('active'); cloudCanvas.innerHTML = ''; }
 		cloudBtn.addEventListener('click', openCloudModal);
 		closeCloudBtn.addEventListener('click', closeCloudModal);
 		cloudModal.addEventListener('click', function(e) { if (e.target === cloudModal) closeCloudModal(); });
