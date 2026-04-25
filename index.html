@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+	<title>Настроение</title>
+	<link rel="manifest" href="?resource=manifest.webmanifest">
+	<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%237c6aff'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white'%3E😊%3C/text%3E%3C/svg%3E">
+	<meta name="theme-color" content="#7c6aff">
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+		@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700&family=Nunito:wght@400;500;600&display=swap');
+		:root { --bg: #0e0e14; --surface: #16161f; --surface2: #1e1e2a; --border: rgba(255,255,255,0.07); --text: #f0f0f8; --muted: rgba(240,240,248,0.4); --accent: #7c6aff; --accent2: #ff6a9e; }
+		body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; display: flex; justify-content: center; padding: 0 0 40px; overflow-x: hidden; }
+		.noise { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: url("data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20256%20256%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cfilter%20id%3D%22noise%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%224%22%20stitchTiles%3D%22stitch%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%2523noise%29%22%20opacity%3D%220.04%22%2F%3E%3C%2Fsvg%3E"); opacity: 0.4; }
+		.glow-orb { position: fixed; pointer-events: none; border-radius: 50%; filter: blur(80px); z-index: 0; }
+		.orb1 { width: 350px; height: 350px; background: rgba(124,106,255,0.15); top: -100px; right: -80px; }
+		.orb2 { width: 280px; height: 280px; background: rgba(255,106,158,0.1); bottom: 100px; left: -60px; }
+		.app { width: 100%; max-width: 420px; padding: 24px 20px; position: relative; z-index: 1; }
+		header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+		.greeting { font-family: 'Unbounded', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
+		.greeting span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+		.header-actions { display: flex; gap: 12px; align-items: center; }
+		.cloud-icon { background: var(--surface2); border: 1px solid var(--border); border-radius: 30px; padding: 6px 10px; font-size: 18px; cursor: pointer; transition: 0.2s; line-height: 1; }
+		.cloud-icon:hover { border-color: var(--accent); background: rgba(124,106,255,0.2); }
+		.net-badge { font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 20px; background: rgba(46,204,113,0.15); color: #2ecc71; border: 1px solid rgba(46,204,113,0.25); display: flex; align-items: center; gap: 5px; }
+		.net-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #2ecc71; animation: pulse 2s infinite; }
+		.net-badge.offline { background: rgba(255,165,0,0.15); color: #ffa500; border-color: rgba(255,165,0,0.25); }
+		.net-badge.offline::before { background: #ffa500; animation: none; }
+		@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+		.date-line { text-align: center; font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 28px; }
+		.carousel-wrap { background: var(--surface); border-radius: 28px; border: 1px solid var(--border); padding: 32px 20px 28px; margin-bottom: 16px; position: relative; }
+		.carousel-wrap::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(124,106,255,0.5), transparent); }
+		.mood-label { text-align: center; font-family: 'Unbounded', sans-serif; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 24px; }
+		.emoji-track-wrap { position: relative; height: 110px; overflow: hidden; touch-action: pan-y; }
+		.emoji-track { display: flex; height: 100%; transition: transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1); will-change: transform; }
+		.emoji-slide { flex: 0 0 100%; display: flex; justify-content: center; align-items: center; }
+		.emoji-slide .em { font-size: 88px; filter: drop-shadow(0 0 20px rgba(124,106,255,0.4)); }
+		@keyframes emojiPop { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+		.dots { display: flex; justify-content: center; gap: 6px; margin-top: 20px; }
+		.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all 0.3s; cursor: pointer; }
+		.dot.active { width: 20px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+		.carousel-nav { display: flex; justify-content: space-between; margin-top: 16px; }
+		.nav-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); width: 44px; height: 44px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+		.nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+		.nav-btn:active { transform: scale(0.93); }
+		.mood-name { flex: 1; text-align: center; font-family: 'Unbounded', sans-serif; font-size: 13px; line-height: 44px; }
+		textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 16px; font-family: 'Nunito', sans-serif; font-size: 15px; color: var(--text); resize: none; }
+		textarea:focus { outline: none; border-color: rgba(124,106,255,0.5); box-shadow: 0 0 0 3px rgba(124,106,255,0.1); }
+		.save-btn { width: 100%; background: linear-gradient(135deg, var(--accent) 0%, #a06aff 50%, var(--accent2) 100%); background-size: 200% 200%; animation: gradShift 4s ease infinite; color: white; border: none; border-radius: 18px; padding: 17px; font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 24px rgba(124,106,255,0.35); }
+		.save-btn:active { transform: scale(0.97); }
+		.save-btn:disabled { opacity: 0.5; animation: none; background: var(--surface2); }
+		@keyframes gradShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+		.history-header { display: flex; justify-content: space-between; align-items: center; margin: 32px 0 16px; }
+		.history-title { font-family: 'Unbounded', sans-serif; font-size: 13px; text-transform: uppercase; color: var(--muted); }
+		.history-count { font-size: 11px; color: var(--accent); background: rgba(124,106,255,0.1); padding: 3px 8px; border-radius: 10px; }
+		.history-list { display: flex; flex-direction: column; gap: 10px; }
+		.history-item { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 14px 16px; }
+		.h-emoji { font-size: 32px; width: 48px; height: 48px; background: var(--surface2); border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+		.h-content { flex: 1; min-width: 0; }
+		.h-date { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+		.h-comment { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.h-comment.empty { color: var(--muted); font-style: italic; }
+		.edit-icon, .delete-icon { background: var(--surface2); border-radius: 10px; padding: 5px; cursor: pointer; font-size: 14px; width: 28px; text-align: center; }
+		.edit-icon:hover { background: var(--accent); }
+		.delete-icon:hover { background: #ff4d4d; }
+		.h-offline { font-size: 10px; color: #ffa500; background: rgba(255,165,0,0.1); padding: 3px 7px; border-radius: 8px; }
+		.empty-state { text-align: center; padding: 32px 20px; color: var(--muted); }
+		.loc-pill { background: rgba(124,106,255,0.12); border: 1px solid rgba(124,106,255,0.25); border-radius: 20px; padding: 6px 10px; font-size: 12px; color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+		.loc-clear { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; }
+		.loc-clear:hover { color: var(--accent2); }
+		.h-loc { font-size: 11px; color: var(--muted); margin-top: 3px; }
+		.h-loc::before { content: '📍 '; }
+		.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 12px 20px; transition: transform 0.4s; z-index: 100; pointer-events: none; }
+		.toast.show { transform: translateX(-50%) translateY(0); }
+		.streak-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; }
+		.streak-num { font-family: 'Unbounded', sans-serif; font-size: 22px; background: linear-gradient(135deg, #ff9f43, #ff6a9e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+		.loc-row { margin-bottom: 14px; min-height: 36px; }
+		.modal-cloud { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 1000; display: flex; align-items: center; justify-content: center; visibility: hidden; opacity: 0; transition: 0.3s; }
+		.modal-cloud.active { visibility: visible; opacity: 1; }
+		.cloud-modal-content { width: 90%; max-width: 500px; height: 70vh; background: rgba(30,30,42,0.9); border-radius: 48px; position: relative; overflow: hidden; border: 1px solid rgba(124,106,255,0.3); box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+		.cloud-close { position: absolute; top: 16px; right: 20px; background: var(--surface2); border: none; color: white; font-size: 24px; width: 40px; height: 40px; border-radius: 30px; cursor: pointer; z-index: 10; backdrop-filter: blur(4px); }
+		.cloud-canvas { position: relative; width: 100%; height: 100%; overflow: hidden; }
+		.floating-emoji { position: absolute; user-select: none; pointer-events: none; will-change: transform; transition: none; }
+		@keyframes emojiBreathe { 0%,100% { filter: drop-shadow(0 0 16px rgba(124,106,255,0.35)); transform: scale(1); } 50% { filter: drop-shadow(0 0 32px rgba(124,106,255,0.7)); transform: scale(1.06); } }
+		.emoji-slide.active .em { animation: emojiPop 0.4s cubic-bezier(0.34,1.56,0.64,1), emojiBreathe 3s ease-in-out 0.4s infinite; }
+	</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="glow-orb orb1"></div>
+<div class="glow-orb orb2"></div>
+
+<div class="app">
+	<header>
+		<div class="greeting">Привет, <span id="user-name">...</span> 👋</div>
+		<div class="header-actions">
+			<div id="cloudBtn" class="cloud-icon">☁️</div>
+			<div id="net-badge" class="net-badge">Online</div>
+		</div>
+	</header>
+
+	<div class="date-line" id="today-date"></div>
+
+	<div class="streak-card" id="streak-card" style="display:none">
+		<div class="streak-icon">🔥</div>
+		<div><div class="streak-num" id="streak-num">0</div><div class="streak-text">дней подряд</div></div>
+	</div>
+
+	<div class="carousel-wrap">
+		<div class="mood-label">Как ты сейчас?</div>
+		<div class="emoji-track-wrap" id="track-wrap">
+			<div class="emoji-track" id="emoji-track"></div>
+		</div>
+		<div class="dots" id="dots"></div>
+		<div class="carousel-nav">
+			<button class="nav-btn" id="prevBtn">←</button>
+			<div class="mood-name" id="mood-name"></div>
+			<button class="nav-btn" id="nextBtn">→</button>
+		</div>
+	</div>
+
+	<div class="input-wrap">
+		<textarea id="comment" rows="3" placeholder="Что происходит? Можно не писать..."></textarea>
+	</div>
+	<div class="loc-row" id="loc-row"></div>
+	<button class="save-btn" id="save-btn">Зафиксировать момент</button>
+
+	<div class="history-header">
+		<div class="history-title">История</div>
+		<div class="history-count" id="hist-count">0</div>
+	</div>
+	<div class="history-list" id="history-list">
+		<div class="empty-state"><div class="es-emoji">🌙</div>Загрузка...</div>
+	</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Модалка редактирования -->
+<div id="editModal" class="modal-cloud" style="background: rgba(0,0,0,0.8); backdrop-filter: blur(0);">
+	<div class="cloud-modal-content" style="height: auto; width: 280px; border-radius: 24px; padding: 20px;">
+		<h3 style="margin-bottom: 10px;">✏️ Редактировать</h3>
+		<textarea id="editComment" rows="3" placeholder="Новый комментарий..." style="width:100%"></textarea>
+		<div style="display: flex; gap: 12px; margin-top: 15px;">
+			<button id="saveEditBtn" style="background: var(--accent); color: white; border: none; padding: 8px 20px; border-radius: 30px;">Сохранить</button>
+			<button id="cancelEditBtn" style="background: var(--surface); color: var(--muted); border: none; padding: 8px 20px; border-radius: 30px;">Отмена</button>
+		</div>
+	</div>
+</div>
+
+<!-- Модалка облака настроений -->
+<div id="cloudModal" class="modal-cloud">
+	<div class="cloud-modal-content">
+		<button class="cloud-close" id="closeCloudBtn">✕</button>
+		<div id="cloudCanvas" class="cloud-canvas"></div>
+	</div>
+</div>
+
+<script>
+	function safeRun(method, args, onSuccess, onFailure) {
+		try {
+			if (typeof google === 'undefined' || !google.script || !google.script.run) {
+				if (onFailure) setTimeout(function() { onFailure(new Error('offline')); }, 0);
+				return;
+			}
+			var r = google.script.run;
+			if (onSuccess) r = r.withSuccessHandler(onSuccess);
+			if (onFailure) r = r.withFailureHandler(onFailure);
+			r[method].apply(r, args || []);
+		} catch(e) {
+			if (onFailure) setTimeout(function() { onFailure(e); }, 0);
+		}
+	}
+	(function() {
+		// ========== MOODS ==========
+		var MOODS = [
+			{ emoji: '😰', name: 'Тревога' }, { emoji: '😬', name: 'Напряжение' },
+			{ emoji: '🤢', name: 'Мутит' }, { emoji: '😵', name: 'Головокружение' },
+			{ emoji: '😐', name: 'Нейтрально' }, { emoji: '😌', name: 'Спокойно' },
+			{ emoji: '😊', name: 'Хорошо' }, { emoji: '🤩', name: 'Отлично' },
+			{ emoji: '🥴', name: 'Пьяный' }, { emoji: '🤤', name: 'Голоден' },
+			{ emoji: '🫠', name: 'Устал' }, { emoji: '😴', name: 'Сонный' },
+			{ emoji: '😤', name: 'Раздражение' }
+		];
+
+		var savedMood = localStorage.getItem('lastMoodIndex');
+		var cur = 3;
+		if (savedMood !== null && !isNaN(parseInt(savedMood))) {
+			var idx = parseInt(savedMood);
+			if (idx >= 0 && idx < MOODS.length) cur = idx;
+		}
+
+		var startX = null;
+		var currentLocation = null;
+		var currentEditId = null;
+		var allHistoryData = [];
+		var fullHistory = [];
+		var currentLimit = 10;
+		var loadMoreBtn = null;
+
+		// DOM
+		var track = document.getElementById('emoji-track');
+		var dotsEl = document.getElementById('dots');
+		var moodNameEl = document.getElementById('mood-name');
+		var netBadge = document.getElementById('net-badge');
+		var histList = document.getElementById('history-list');
+		var histCount = document.getElementById('hist-count');
+		var saveBtn = document.getElementById('save-btn');
+		var toastEl = document.getElementById('toast');
+		var prevBtn = document.getElementById('prevBtn');
+		var nextBtn = document.getElementById('nextBtn');
+		var cloudBtn = document.getElementById('cloudBtn');
+		var cloudModal = document.getElementById('cloudModal');
+		var closeCloudBtn = document.getElementById('closeCloudBtn');
+		var cloudCanvas = document.getElementById('cloudCanvas');
+		var commentField = document.getElementById('comment');
+		var userNameSpan = document.getElementById('user-name');
+
+		// Helpers
+		function showToast(msg) {
+			toastEl.textContent = msg;
+			toastEl.classList.add('show');
+			if (window.toastTimer) clearTimeout(window.toastTimer);
+			window.toastTimer = setTimeout(function() { toastEl.classList.remove('show'); }, 2500);
+		}
+		function escapeHtml(str) {
+			if (!str) return '';
+			return String(str).replace(/[&<>]/g, function(m) {
+				if (m === '&') return '&amp;';
+				if (m === '<') return '&lt;';
+				if (m === '>') return '&gt;';
+				return m;
+			});
+		}
+
+		// ========== CAROUSEL ==========
+		function buildCarousel() {
+			for (var i = 0; i < MOODS.length; i++) {
+				var slide = document.createElement('div');
+				slide.className = 'emoji-slide' + (i === cur ? ' active' : '');
+				slide.innerHTML = '<div class="em">' + MOODS[i].emoji + '</div>';
+				track.appendChild(slide);
+				var dot = document.createElement('div');
+				dot.className = 'dot' + (i === cur ? ' active' : '');
+				dot.addEventListener('click', (function(idx) { return function() { go(idx - cur); }; })(i));
+				dotsEl.appendChild(dot);
+			}
+			updateCarousel(false);
+		}
+		function updateCarousel(animate) {
+			if (animate === false) track.style.transition = 'none';
+			else track.style.transition = 'transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1)';
+			track.style.transform = 'translateX(-' + (cur * 100) + '%)';
+			var slides = document.querySelectorAll('.emoji-slide');
+			var dots = document.querySelectorAll('.dot');
+			for (var i = 0; i < slides.length; i++) {
+				slides[i].classList.toggle('active', i === cur);
+				if (dots[i]) dots[i].classList.toggle('active', i === cur);
+			}
+			moodNameEl.textContent = MOODS[cur].name;
+		}
+		function saveCurrentMood() { localStorage.setItem('lastMoodIndex', cur); }
+		function go(dir) {
+			cur = (cur + dir + MOODS.length) % MOODS.length;
+			updateCarousel(true);
+			saveCurrentMood();
+		}
+		var wrap = document.getElementById('track-wrap');
+		if (wrap) {
+			wrap.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; }, { passive: true });
+			wrap.addEventListener('touchend', function(e) {
+				if (startX === null) return;
+				var dx = e.changedTouches[0].clientX - startX;
+				if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+				startX = null;
+			});
+		}
+		prevBtn.addEventListener('click', function() { go(-1); });
+		nextBtn.addEventListener('click', function() { go(1); });
+
+		var todayDateEl = document.getElementById('today-date');
+		if (todayDateEl) {
+			todayDateEl.textContent = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+		}
+
+		// ========== NETWORK STATUS ==========
+		function updateNetworkStatus() {
+			var isOnline = navigator.onLine;
+			netBadge.textContent = isOnline ? 'Online' : 'Offline';
+			netBadge.className = 'net-badge' + (isOnline ? '' : ' offline');
+			if (isOnline) syncOffline();
+		}
+		window.addEventListener('online', updateNetworkStatus);
+		window.addEventListener('offline', updateNetworkStatus);
+		updateNetworkStatus();
+
+		// ========== LOCATION ==========
+		function setLocation(loc) {
+			currentLocation = loc;
+			var row = document.getElementById('loc-row');
+			if (!row) return;
+			row.innerHTML = '<div class="loc-pill">📍 <span class="loc-text">' + escapeHtml(loc.label) + '</span> <button class="loc-clear" id="locRefreshBtn">↻</button> <button class="loc-clear" id="locClearBtn">✕</button></div>';
+			var refreshBtn = document.getElementById('locRefreshBtn');
+			var clearBtn = document.getElementById('locClearBtn');
+			if (refreshBtn) refreshBtn.addEventListener('click', retryLocation);
+			if (clearBtn) clearBtn.addEventListener('click', clearLocation);
+		}
+		function clearLocation() {
+			currentLocation = null;
+			var row = document.getElementById('loc-row');
+			if (row) row.innerHTML = '';
+		}
+		function retryLocation() {
+			currentLocation = null;
+			autoDetectLocation();
+		}
+		function autoDetectLocation() {
+			if (!navigator.geolocation) return;
+			var row = document.getElementById('loc-row');
+			if (!row) return;
+			row.innerHTML = '<div class="loc-btn loading">⏳ Определяю место...</div>';
+			navigator.geolocation.getCurrentPosition(
+				function(pos) {
+					var lat = pos.coords.latitude, lng = pos.coords.longitude;
+					fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&accept-language=ru&zoom=18')
+						.then(function(r) { return r.json(); })
+						.then(function(d) {
+							var a = d.address || {};
+							var place = a.amenity || a.shop || a.cafe || a.restaurant || a.tourism || a.leisure || '';
+							var street = a.road ? (a.road + (a.house_number ? ', ' + a.house_number : '')) : '';
+							var district = a.neighbourhood || a.suburb || a.quarter || '';
+							var city = a.city || a.town || a.village || a.county || '';
+							var parts = [place, street || district, city].filter(Boolean);
+							var label = parts.slice(0, 2).join(', ') || (d.display_name ? d.display_name.split(',').slice(0, 2).join(',') : lat.toFixed(5) + ',' + lng.toFixed(5));
+							setLocation({ coords: lat.toFixed(5) + ',' + lng.toFixed(5), label: label });
+						})
+						.catch(function() {
+							setLocation({ coords: lat.toFixed(5) + ',' + lng.toFixed(5), label: lat.toFixed(3) + ',' + lng.toFixed(3) });
+						});
+				},
+				function() { row.innerHTML = ''; }
+			);
+		}
+
+		// ========== HISTORY RENDERING ==========
+		function renderHistoryItems() {
+			histList.innerHTML = '';
+			var offlineQueue = JSON.parse(localStorage.getItem('moodQueue') || '[]');
+			for (var i = offlineQueue.length - 1; i >= 0; i--) {
+				addToUI(offlineQueue[i], true, null);
+			}
+			var visible = fullHistory.slice(0, currentLimit);
+			for (var i = 0; i < visible.length; i++) {
+				var row = visible[i];
+				addToUI({
+					date: row[1],
+					emoji: row[2],
+					comment: row[3] || '',
+					location: row[4] || ''
+				}, false, row[0]);
+			}
+			if (fullHistory.length === 0 && offlineQueue.length === 0) {
+				histList.innerHTML = '<div class="empty-state"><div class="es-emoji">🌱</div>Пока пусто — сделай первую запись!</div>';
+			}
+			updateCount();
+
+			if (fullHistory.length > currentLimit) {
+				if (!loadMoreBtn) {
+					loadMoreBtn = document.createElement('button');
+					loadMoreBtn.textContent = 'Показать ещё';
+					loadMoreBtn.className = 'save-btn';
+					loadMoreBtn.style.marginTop = '10px';
+					loadMoreBtn.style.background = 'var(--surface2)';
+					loadMoreBtn.style.animation = 'none';
+					loadMoreBtn.addEventListener('click', function() {
+						currentLimit += 10;
+						renderHistoryItems();
+						if (fullHistory.length <= currentLimit && loadMoreBtn) {
+							loadMoreBtn.remove();
+							loadMoreBtn = null;
+						}
+					});
+					histList.insertAdjacentElement('afterend', loadMoreBtn);
+				}
+			} else {
+				if (loadMoreBtn) { loadMoreBtn.remove(); loadMoreBtn = null; }
+			}
+		}
+		function addToUI(item, isOffline, entryId) {
+			var el = document.createElement('div');
+			el.className = 'history-item';
+			if (entryId) el.setAttribute('data-id', entryId);
+			var date = item.date;
+			if (date instanceof Date) date = date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+			var locHtml = item.location ? '<div class="h-loc">' + escapeHtml(item.location) + '</div>' : '';
+			el.innerHTML = '<div class="h-emoji">' + escapeHtml(item.emoji) + '</div>' +
+				'<div class="h-content">' +
+				'<div class="h-date">' + escapeHtml(date) + '</div>' +
+				'<div class="h-comment ' + (item.comment ? '' : 'empty') + '">' + (item.comment ? escapeHtml(item.comment) : 'Без комментария') + '</div>' +
+				locHtml +
+				'</div>' +
+				'<div class="edit-icon" data-id="' + (entryId || '') + '">✏️</div>' +
+				'<div class="delete-icon" data-id="' + (entryId || '') + '">🗑️</div>' +
+				(isOffline ? '<div class="h-offline">⏳ Ждёт</div>' : '');
+			histList.appendChild(el);
+			var editIcon = el.querySelector('.edit-icon');
+			var delIcon = el.querySelector('.delete-icon');
+			if (editIcon && entryId) editIcon.addEventListener('click', function(e) { e.stopPropagation(); openEditModal(entryId, item.comment); });
+			if (delIcon && entryId) delIcon.addEventListener('click', function(e) { e.stopPropagation(); deleteEntryById(entryId, el); });
+		}
+		function updateCount() { histCount.textContent = histList.children.length; }
+		function setFullHistory(serverData) {
+			fullHistory = serverData || [];
+			currentLimit = 10;
+			renderHistoryItems();
+			allHistoryData = fullHistory;
+		}
+		function addNewEntryToTop(entry, isOffline, entryId) {
+			if (!isOffline && entryId) {
+				fullHistory.unshift([entryId, entry.date, entry.emoji, entry.comment, entry.location]);
+			}
+			renderHistoryItems();
+		}
+
+		// ========== EDIT & DELETE ==========
+		var editModalEl = document.getElementById('editModal');
+		var editCommentEl = document.getElementById('editComment');
+		function openEditModal(id, currentComment) {
+			currentEditId = id;
+			editCommentEl.value = currentComment || '';
+			editModalEl.classList.add('active');
+		}
+		function closeEditModal() {
+			editModalEl.classList.remove('active');
+			currentEditId = null;
+		}
+		if (document.getElementById('saveEditBtn')) {
+			document.getElementById('saveEditBtn').addEventListener('click', function() {
+				if (!currentEditId) return;
+				if (!navigator.onLine) { showToast('Нет интернета, изменения будут после подключения'); closeEditModal(); return; }
+				var newComment = editCommentEl.value.trim();
+				safeRun('updateEntry', [currentEditId, newComment],
+					function(res) {
+						if (res && res.success) {
+							showToast('Обновлено');
+							for (var i = 0; i < fullHistory.length; i++) {
+								if (fullHistory[i][0] === currentEditId) {
+									fullHistory[i][3] = newComment;
+									break;
+								}
+							}
+							renderHistoryItems();
+						} else showToast('Ошибка');
+						closeEditModal();
+					},
+					function() { showToast('Ошибка соединения'); closeEditModal(); }
+				);
+			});
+		}
+		if (document.getElementById('cancelEditBtn')) document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
+
+		function deleteEntryById(id, rowElement) {
+			if (!navigator.onLine) { showToast('Нет интернета, удаление доступно только онлайн'); return; }
+			if (!confirm('Удалить запись?')) return;
+			safeRun('deleteEntry', [id],
+				function(res) {
+					if (res && res.success) {
+						for (var i = 0; i < fullHistory.length; i++) {
+							if (fullHistory[i][0] === id) { fullHistory.splice(i, 1); break; }
+						}
+						renderHistoryItems();
+						showToast('Запись удалена');
+					} else showToast('Ошибка');
+				},
+				function() { showToast('Ошибка удаления'); }
+			);
+		}
+
+		// ========== SAVE & OFFLINE QUEUE ==========
+		function saveCommentDraft() { if (commentField) localStorage.setItem('commentDraft', commentField.value); }
+		function restoreCommentDraft() { if (commentField) { var draft = localStorage.getItem('commentDraft'); if (draft) commentField.value = draft; } }
+		function clearCommentDraft() { localStorage.removeItem('commentDraft'); if (commentField) commentField.value = ''; }
+		if (commentField) {
+			commentField.addEventListener('input', saveCommentDraft);
+			restoreCommentDraft();
+		}
+
+		function saveEntryAction() {
+			var emoji = MOODS[cur].emoji;
+			var comment = commentField ? commentField.value.trim() : '';
+			var date = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+			var location = currentLocation ? currentLocation.label : '';
+			var entry = { emoji: emoji, comment: comment, date: date, location: location };
+
+			clearCommentDraft();
+			saveBtn.disabled = true;
+			saveBtn.textContent = 'Сохраняю...';
+
+			if (navigator.onLine) {
+				safeRun('saveDataToSheet', [emoji, comment, null, location],
+					function(res) {
+						saveBtn.disabled = false;
+						saveBtn.textContent = 'Зафиксировать момент';
+						if (res && res.success) {
+							showToast('✨ Сохранено');
+							updateStreak();
+							addNewEntryToTop(entry, false, res.id);
+							allHistoryData = fullHistory;
+						} else showToast('Ошибка');
+					},
+					function() {
+						saveBtn.disabled = false;
+						saveBtn.textContent = 'Зафиксировать момент';
+						showToast('Ошибка, сохранено локально');
+						var q = JSON.parse(localStorage.getItem('moodQueue') || '[]');
+						q.push(entry);
+						localStorage.setItem('moodQueue', JSON.stringify(q));
+						addNewEntryToTop(entry, true, null);
+						updateStreak();
+					}
+				);
+			} else {
+				var q = JSON.parse(localStorage.getItem('moodQueue') || '[]');
+				q.push(entry);
+				localStorage.setItem('moodQueue', JSON.stringify(q));
+				saveBtn.disabled = false;
+				saveBtn.textContent = 'Зафиксировать момент';
+				showToast('💾 Сохранено локально');
+				addNewEntryToTop(entry, true, null);
+				updateStreak();
+			}
+		}
+		saveBtn.addEventListener('click', saveEntryAction);
+
+		function syncOffline() {
+			if (!navigator.onLine) return;
+			var queue = JSON.parse(localStorage.getItem('moodQueue') || '[]');
+			if (!queue.length) return;
+			netBadge.textContent = 'Синхр...';
+			var entry = queue[0];
+			safeRun('saveDataToSheet', [entry.emoji, entry.comment, entry.date, entry.location || ''],
+				function(res) {
+					if (res && res.success) {
+						queue.shift();
+						localStorage.setItem('moodQueue', JSON.stringify(queue));
+						addNewEntryToTop(entry, false, res.id);
+						syncOffline();
+					} else {
+						netBadge.textContent = 'Online';
+						netBadge.className = 'net-badge';
+					}
+				},
+				function() {
+					netBadge.textContent = 'Online';
+					netBadge.className = 'net-badge';
+				}
+			);
+		}
+
+		// ========== STREAK ==========
+		function updateStreak() {
+			try {
+				var today = new Date().toDateString();
+				var days = JSON.parse(localStorage.getItem('moodDays') || '[]');
+				if (days.indexOf(today) === -1) {
+					days.push(today);
+					localStorage.setItem('moodDays', JSON.stringify(days));
+				}
+				var streak = 0;
+				var d = new Date();
+				while (days.indexOf(d.toDateString()) !== -1) { streak++; d.setDate(d.getDate() - 1); }
+				var card = document.getElementById('streak-card');
+				var num = document.getElementById('streak-num');
+				if (streak > 1) {
+					if (card) card.style.display = 'flex';
+					if (num) num.textContent = streak;
+				} else {
+					if (card) card.style.display = 'none';
+				}
+			} catch(e) {}
+		}
+
+		// ========== EMOTION CLOUD ==========
+		function openCloudModal() {
+			if (!allHistoryData || allHistoryData.length === 0) { showToast('Нет данных за последние 30 дней'); return; }
+			if (!cloudCanvas) return;
+			cloudCanvas.innerHTML = '';
+			var freq = {};
+			var now = new Date();
+			var monthAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+			for (var i = 0; i < allHistoryData.length; i++) {
+				var row = allHistoryData[i];
+				var dateStr = row[1];
+				var parts = dateStr.split(' ');
+				if (!parts[0]) continue;
+				var dayParts = parts[0].split('.');
+				var itemDate = new Date(dayParts[2], dayParts[1] - 1, dayParts[0]);
+				if (itemDate >= monthAgo) {
+					var em = row[2];
+					freq[em] = (freq[em] || 0) + 1;
+				}
+			}
+			var maxCount = 0;
+			for (var e in freq) if (freq[e] > maxCount) maxCount = freq[e];
+			if (maxCount === 0) {
+				cloudCanvas.innerHTML = '<div class="empty-state" style="margin-top:50%">Нет записей за 30 дней</div>';
+				cloudModal.classList.add('active');
+				return;
+			}
+			var width = cloudCanvas.clientWidth;
+			var height = cloudCanvas.clientHeight;
+			if (width === 0 || height === 0) { setTimeout(openCloudModal, 100); return; }
+			var emojis = Object.keys(freq).sort(function(a,b){return freq[b]-freq[a];});
+			var padding = 12;
+			var placed = [];
+			function overlaps(cx, cy, r) {
+				for (var p = 0; p < placed.length; p++) {
+					var dx = cx - placed[p].cx, dy = cy - placed[p].cy;
+					if (Math.sqrt(dx*dx+dy*dy) < r + placed[p].r + 6) return true;
+				}
+				return false;
+			}
+			for (var i = 0; i < emojis.length; i++) {
+				var em = emojis[i];
+				var count = freq[em];
+				var ratio = count / maxCount;
+				var size = Math.round(26 + Math.sqrt(ratio) * 62);
+				var r = size * 0.55;
+				var opacity = 0.35 + ratio * 0.65;
+				var blur = Math.round((1 - ratio) * 2.5 * 10) / 10;
+				var cx, cy, found = false;
+				var cx0 = width / 2, cy0 = height / 2;
+				for (var attempt = 0; attempt < 300; attempt++) {
+					var angle = attempt * 2.4;
+					var rad = (attempt / 300) * Math.min(width, height) * 0.42;
+					cx = cx0 + rad * Math.cos(angle);
+					cy = cy0 + rad * Math.sin(angle);
+					if (cx - r < padding || cx + r > width - padding) continue;
+					if (cy - r < padding || cy + r > height - padding) continue;
+					if (!overlaps(cx, cy, r)) { found = true; break; }
+				}
+				if (!found) continue;
+				placed.push({cx: cx, cy: cy, r: r});
+				var div = document.createElement('div');
+				div.className = 'floating-emoji';
+				div.textContent = em;
+				div.style.fontSize = size + 'px';
+				div.style.opacity = opacity;
+				div.style.filter = blur > 0 ? 'blur(' + blur + 'px)' : 'none';
+				div.style.left = Math.round(cx - r) + 'px';
+				div.style.top = Math.round(cy - r) + 'px';
+				div.style.lineHeight = '1';
+				var dx1 = (Math.random()-0.5)*28, dy1 = (Math.random()-0.5)*28;
+				var dx2 = (Math.random()-0.5)*22, dy2 = (Math.random()-0.5)*22;
+				var rot = (Math.random()-0.5)*14;
+				var keyName = 'fl' + i;
+				var styleEl = document.createElement('style');
+				styleEl.textContent = '@keyframes ' + keyName + '{' +
+					'0%{transform:translate(0,0) rotate(0deg)}' +
+					'33%{transform:translate(' + dx1 + 'px,' + dy1 + 'px) rotate(' + rot + 'deg)}' +
+					'66%{transform:translate(' + dx2 + 'px,' + dy2 + 'px) rotate(' + (-rot*0.6) + 'deg)}' +
+					'100%{transform:translate(0,0) rotate(0deg)}}';
+				document.head.appendChild(styleEl);
+				var duration = 7 + Math.random() * 10;
+				var delay = Math.random() * 6;
+				div.style.animation = keyName + ' ' + duration + 's ' + delay + 's ease-in-out infinite';
+				cloudCanvas.appendChild(div);
+			}
+			cloudModal.classList.add('active');
+		}
+		function closeCloudModal() { cloudModal.classList.remove('active'); cloudCanvas.innerHTML = ''; }
+		cloudBtn.addEventListener('click', openCloudModal);
+		closeCloudBtn.addEventListener('click', closeCloudModal);
+		cloudModal.addEventListener('click', function(e) { if (e.target === cloudModal) closeCloudModal(); });
+
+		// ========== LOAD SERVER DATA (with timeout for offline) ==========
+		function loadServerData() {
+			if (!navigator.onLine) {
+				if (userNameSpan) userNameSpan.textContent = 'друг';
+				renderHistoryItems();
+				return;
+			}
+			// Таймаут 3 секунды, чтобы не зависнуть в офлайне (но мы уже проверили onLine)
+			var timeout = setTimeout(function() {
+				if (userNameSpan) userNameSpan.textContent = 'друг';
+				renderHistoryItems();
+				showToast('Не удалось загрузить данные с сервера');
+			}, 3000);
+			safeRun('getInitialData', [],
+				function(data) {
+					clearTimeout(timeout);
+					if (userNameSpan) userNameSpan.textContent = data.name || 'друг';
+					setFullHistory(data.history || []);
+					syncOffline();
+				},
+				function() {
+					clearTimeout(timeout);
+					if (userNameSpan) userNameSpan.textContent = 'друг';
+					setFullHistory([]);
+					showToast('Не удалось загрузить данные с сервера');
+				}
+			);
+		}
+
+		// ========== SERVICE WORKER REGISTRATION ==========
+		if ('serviceWorker' in navigator && navigator.onLine) {
+			navigator.serviceWorker.register('?resource=sw.js').catch(function(e) { console.log('SW registration failed', e); });
+		}
+
+		// ========== START ==========
+		buildCarousel();
+		updateStreak();
+		autoDetectLocation();   // геолокация запрашивается, в офлайне просто не сработает
+		loadServerData();
+	})();
+</script>
+</body>
+</html>
