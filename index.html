@@ -307,11 +307,11 @@
 		updateNetworkStatus();
 
 		// ========== LOCATION ==========
-		function setLocation(loc) {
-			currentLocation = loc;
+		function setLocation(coords) {
+			currentLocation = coords;
 			var row = document.getElementById('loc-row');
 			if (!row) return;
-			row.innerHTML = '<div class="loc-pill">📍 <span class="loc-text">' + escapeHtml(loc.label) + '</span> <button class="loc-clear" id="locRefreshBtn">↻</button> <button class="loc-clear" id="locClearBtn">✕</button></div>';
+			row.innerHTML = '<div class="loc-pill">📍 <span class="loc-text">' + escapeHtml(coords) + '</span> <button class="loc-clear" id="locRefreshBtn">↻</button> <button class="loc-clear" id="locClearBtn">✕</button></div>';
 			var refreshBtn = document.getElementById('locRefreshBtn');
 			var clearBtn = document.getElementById('locClearBtn');
 			if (refreshBtn) refreshBtn.addEventListener('click', retryLocation);
@@ -330,27 +330,14 @@
 			if (!navigator.geolocation) return;
 			var row = document.getElementById('loc-row');
 			if (!row) return;
-			row.innerHTML = '<div class="loc-btn loading">⏳ Определяю место...</div>';
+			row.innerHTML = '<div class="loc-btn loading">⏳ Определяю...</div>';
 			navigator.geolocation.getCurrentPosition(
 				function(pos) {
-					var lat = pos.coords.latitude, lng = pos.coords.longitude;
-					fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&accept-language=ru&zoom=18')
-						.then(function(r) { return r.json(); })
-						.then(function(d) {
-							var a = d.address || {};
-							var place = a.amenity || a.shop || a.cafe || a.restaurant || a.tourism || a.leisure || '';
-							var street = a.road ? (a.road + (a.house_number ? ', ' + a.house_number : '')) : '';
-							var district = a.neighbourhood || a.suburb || a.quarter || '';
-							var city = a.city || a.town || a.village || a.county || '';
-							var parts = [place, street || district, city].filter(Boolean);
-							var label = parts.slice(0, 2).join(', ') || (d.display_name ? d.display_name.split(',').slice(0, 2).join(',') : lat.toFixed(5) + ',' + lng.toFixed(5));
-							setLocation({ coords: lat.toFixed(5) + ',' + lng.toFixed(5), label: label });
-						})
-						.catch(function() {
-							setLocation({ coords: lat.toFixed(5) + ',' + lng.toFixed(5), label: lat.toFixed(3) + ',' + lng.toFixed(3) });
-						});
+					var coords = pos.coords.latitude.toFixed(6) + ',' + pos.coords.longitude.toFixed(6);
+					setLocation(coords);
 				},
-				function() { row.innerHTML = ''; }
+				function() { row.innerHTML = ''; },
+				{ timeout: 10000, maximumAge: 120000, enableHighAccuracy: true }
 			);
 		}
 
@@ -404,7 +391,11 @@
 			if (entryId) el.setAttribute('data-id', entryId);
 			var date = item.date;
 			if (date instanceof Date) date = date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-			var locHtml = item.location ? '<div class="h-loc">' + escapeHtml(item.location) + '</div>' : '';
+			var locHtml = '';
+			if (item.location) {
+				var mapsUrl = 'https://maps.google.com/?q=' + encodeURIComponent(item.location);
+				locHtml = '<div class="h-loc"><a href="' + mapsUrl + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">📍 ' + escapeHtml(item.location) + '</a></div>';
+			}
 			el.innerHTML = '<div class="h-emoji">' + escapeHtml(item.emoji) + '</div>' +
 				'<div class="h-content">' +
 				'<div class="h-date">' + escapeHtml(date) + '</div>' +
@@ -499,7 +490,7 @@
 			var emoji = MOODS[cur].emoji;
 			var comment = commentField ? commentField.value.trim() : '';
 			var date = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-			var location = currentLocation ? currentLocation.label : '';
+			var location = currentLocation || '';
 			var entry = { emoji: emoji, comment: comment, date: date, location: location };
 
 			clearCommentDraft();
