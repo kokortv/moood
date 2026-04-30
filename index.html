@@ -14,8 +14,8 @@
 		body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; display: flex; justify-content: center; padding: 0 0 40px; overflow-x: hidden; }
 		.noise { position: fixed; inset: 0; z-index: 0; pointer-events: none; background-image: url("data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%20256%20256%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cfilter%20id%3D%22noise%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.9%22%20numOctaves%3D%224%22%20stitchTiles%3D%22stitch%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%2523noise%29%22%20opacity%3D%220.04%22%2F%3E%3C%2Fsvg%3E"); opacity: 0.4; }
 		.glow-orb { position: fixed; pointer-events: none; border-radius: 50%; filter: blur(80px); z-index: 0; }
-		.orb1 { width: 350px; height: 350px; background: rgba(124,106,255,0.15); top: -100px; right: -80px; }
-		.orb2 { width: 280px; height: 280px; background: rgba(255,106,158,0.1); bottom: 100px; left: -60px; }
+		.orb1 { width: 350px; height: 350px; background: rgba(124,106,255,0.15); top: -100px; right: -80px; transition: background 1.2s ease; }
+		.orb2 { width: 280px; height: 280px; background: rgba(255,106,158,0.1); bottom: 100px; left: -60px; transition: background 1.2s ease; }
 		.app { width: 100%; max-width: 420px; padding: 24px 20px; position: relative; z-index: 1; }
 		header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
 		.greeting { font-family: 'Unbounded', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.5px; }
@@ -55,7 +55,10 @@
 		.history-title { font-family: 'Unbounded', sans-serif; font-size: 13px; text-transform: uppercase; color: var(--muted); }
 		.history-count { font-size: 11px; color: var(--accent); background: rgba(124,106,255,0.1); padding: 3px 8px; border-radius: 10px; }
 		.history-list { display: flex; flex-direction: column; gap: 10px; }
-		.history-item { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 14px 16px; }
+		.history-item { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 14px 16px; animation: cardIn 0.35s ease both; }
+		@keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+		@keyframes emojiLaunch { 0% { transform: scale(1) translateY(0); opacity: 1; } 100% { transform: scale(1.6) translateY(-60px); opacity: 0; } }
+		.emoji-launching .em { animation: emojiLaunch 0.5s cubic-bezier(0.2, 0, 0.4, 1) forwards !important; }
 		.h-emoji { font-size: 32px; width: 48px; height: 48px; background: var(--surface2); border-radius: 14px; display: flex; align-items: center; justify-content: center; }
 		.h-content { flex: 1; min-width: 0; }
 		.h-date { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
@@ -74,13 +77,6 @@
 		.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 12px 20px; transition: transform 0.4s; z-index: 100; pointer-events: none; }
 		.toast.show { transform: translateX(-50%) translateY(0); }
 		.streak-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; }
-		.sparkline-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 14px 18px 10px; margin-bottom: 16px; display: none; }
-		.sparkline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-		.sparkline-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'Unbounded', sans-serif; }
-		.sparkline-avg { font-size: 13px; }
-		.sparkline-svg { width: 100%; display: block; overflow: visible; }
-		.sparkline-days { display: flex; justify-content: space-between; margin-top: 4px; }
-		.sparkline-day { font-size: 10px; color: var(--muted); text-align: center; flex: 1; }
 		.streak-num { font-family: 'Unbounded', sans-serif; font-size: 22px; background: linear-gradient(135deg, #ff9f43, #ff6a9e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 		.loc-row { margin-bottom: 14px; min-height: 36px; }
 		.modal-cloud { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; visibility: hidden; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
@@ -118,15 +114,6 @@
 	<div class="streak-card" id="streak-card" style="display:none">
 		<div class="streak-icon">🔥</div>
 		<div><div class="streak-num" id="streak-num">0</div><div class="streak-text">дней подряд</div></div>
-	</div>
-
-	<div class="sparkline-wrap" id="sparkline-wrap">
-		<div class="sparkline-header">
-			<div class="sparkline-label">7 дней</div>
-			<div class="sparkline-avg" id="sparkline-avg"></div>
-		</div>
-		<svg class="sparkline-svg" id="sparkline-svg" height="48" viewBox="0 0 300 48" preserveAspectRatio="none"></svg>
-		<div class="sparkline-days" id="sparkline-days"></div>
 	</div>
 
 	<div class="carousel-wrap">
@@ -291,10 +278,35 @@
 			moodNameEl.textContent = MOODS[cur].name;
 		}
 		function saveCurrentMood() { localStorage.setItem('lastMoodIndex', cur); }
+		// Цвета орбов по настроению [orb1, orb2]
+		var ORB_COLORS = [
+			['rgba(255,80,80,0.18)',   'rgba(255,140,100,0.12)'],  // тревога
+			['rgba(255,140,60,0.15)',  'rgba(255,100,80,0.1)'],    // напряжение
+			['rgba(120,80,255,0.18)', 'rgba(200,80,255,0.12)'],   // хаос
+			['rgba(100,100,180,0.15)','rgba(80,180,200,0.1)'],    // нейтрально
+			['rgba(80,180,200,0.15)', 'rgba(100,200,160,0.1)'],   // спокойно
+			['rgba(124,106,255,0.18)','rgba(255,106,158,0.12)'],  // хорошо
+			['rgba(255,200,60,0.18)', 'rgba(255,140,60,0.15)'],   // отлично
+			['rgba(80,100,200,0.15)', 'rgba(100,80,180,0.1)'],    // устал
+			['rgba(60,100,180,0.15)', 'rgba(80,150,220,0.1)'],    // сонный
+			['rgba(255,160,80,0.18)', 'rgba(255,100,160,0.12)'],  // тронут
+			['rgba(200,60,80,0.18)',  'rgba(255,100,60,0.12)'],   // раздражение
+			['rgba(80,200,150,0.18)', 'rgba(100,220,255,0.12)'],  // вдохновение
+			['rgba(255,180,60,0.18)', 'rgba(200,120,255,0.12)'],  // тронут2
+			['rgba(100,180,255,0.18)','rgba(60,220,180,0.12)']    // доп
+		];
+		function updateOrbs() {
+			var orb1 = document.querySelector('.orb1');
+			var orb2 = document.querySelector('.orb2');
+			var colors = ORB_COLORS[cur % ORB_COLORS.length];
+			if (orb1) orb1.style.background = colors[0];
+			if (orb2) orb2.style.background = colors[1];
+		}
 		function go(dir) {
 			cur = (cur + dir + MOODS.length) % MOODS.length;
 			updateCarousel(true);
 			saveCurrentMood();
+			updateOrbs();
 		}
 		var wrap = document.getElementById('track-wrap');
 		if (wrap) {
@@ -363,6 +375,7 @@
 		// ========== HISTORY RENDERING ==========
 		function renderHistoryItems() {
 			histList.innerHTML = '';
+			var staggerIndex = 0;
 			var offlineQueue = JSON.parse(localStorage.getItem('moodQueue') || '[]');
 			for (var i = offlineQueue.length - 1; i >= 0; i--) {
 				addToUI(offlineQueue[i], true, null);
@@ -407,6 +420,8 @@
 		function addToUI(item, isOffline, entryId) {
 			var el = document.createElement('div');
 			el.className = 'history-item';
+			el.style.animationDelay = (staggerIndex * 40) + 'ms';
+			staggerIndex++;
 			if (entryId) el.setAttribute('data-id', entryId);
 			var date = item.date;
 			if (date instanceof Date) date = date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -434,9 +449,8 @@
 		function setFullHistory(serverData) {
 			fullHistory = serverData || [];
 			currentLimit = 10;
-			allHistoryData = fullHistory;
 			renderHistoryItems();
-			buildSparkline(fullHistory);
+			allHistoryData = fullHistory;
 		}
 		function addNewEntryToTop(entry, isOffline, entryId) {
 			if (!isOffline && entryId) {
@@ -513,6 +527,14 @@
 			var location = currentLocation || '';
 			var entry = { emoji: emoji, comment: comment, date: date, location: location };
 
+			// Анимация — эмодзи улетает вверх
+			var activeSlide = document.querySelector('.emoji-slide.active');
+			if (activeSlide) {
+				activeSlide.classList.add('emoji-launching');
+				setTimeout(function() {
+					activeSlide.classList.remove('emoji-launching');
+				}, 500);
+			}
 			clearCommentDraft();
 			saveBtn.disabled = true;
 			saveBtn.textContent = 'Сохраняю...';
@@ -574,103 +596,6 @@
 					netBadge.textContent = 'Online';
 					netBadge.className = 'net-badge';
 				});
-		}
-
-
-		// ========== SPARKLINE ==========
-		var MOOD_SCORE = {
-			'😰':1,'😬':2,'🤢':2,'😵':2,'🌪️':2,
-			'😐':5,'😌':6,'😊':7,'🤩':9,
-			'🫠':3,'😴':4,'😤':3,'🥹':7,'🌈':8
-		};
-
-		function buildSparkline(historyData) {
-			var wrap = document.getElementById('sparkline-wrap');
-			var svg  = document.getElementById('sparkline-svg');
-			var daysEl = document.getElementById('sparkline-days');
-			var avgEl  = document.getElementById('sparkline-avg');
-			if (!wrap || !svg || !historyData || !historyData.length) return;
-
-			// Строим 7 дней назад
-			var days = [];
-			for (var i = 6; i >= 0; i--) {
-				var d = new Date();
-				d.setHours(0,0,0,0);
-				d.setDate(d.getDate() - i);
-				days.push({ ts: d.getTime(), scores: [], label: d.toLocaleDateString('ru-RU', { weekday: 'short' }) });
-			}
-
-			// Раскладываем записи по дням
-			historyData.forEach(function(row) {
-				var score = MOOD_SCORE[String(row[2] || '')];
-				if (!score) return;
-				var str = String(row[1] || '').split(' ')[0].split('.');
-				if (str.length < 3) return;
-				var ts = new Date(str[2], str[1]-1, str[0]).getTime();
-				days.forEach(function(day) {
-					if (day.ts === ts) day.scores.push(score);
-				});
-			});
-
-			// Среднее за день (null если нет данных)
-			var values = days.map(function(d) {
-				if (!d.scores.length) return null;
-				return d.scores.reduce(function(a,b){return a+b;},0) / d.scores.length;
-			});
-
-			var hasData = values.some(function(v){return v!==null;});
-			if (!hasData) return;
-			wrap.style.display = 'block';
-
-			// Интерполяция пустых точек
-			var filled = values.slice();
-			for (var i = 0; i < filled.length; i++) {
-				if (filled[i] !== null) continue;
-				var prev = null, next = null;
-				for (var p = i-1; p >= 0; p--) { if (filled[p]!==null){prev=filled[p];break;} }
-				for (var n = i+1; n < filled.length; n++) { if (filled[n]!==null){next=filled[n];break;} }
-				if (prev!==null&&next!==null) filled[i]=(prev+next)/2;
-				else filled[i]=prev||next||5;
-			}
-
-			// Среднее за неделю
-			var real = values.filter(function(v){return v!==null;});
-			var avg = real.reduce(function(a,b){return a+b;},0)/real.length;
-			var avgEmoji = avg>=7.5?'🤩':avg>=6?'😊':avg>=4.5?'😌':avg>=3?'😐':'😰';
-			if (avgEl) avgEl.textContent = avgEmoji + ' ' + avg.toFixed(1);
-
-			// SVG кривая
-			var W=300, H=48, pad=8;
-			var pts = filled.map(function(v,i) {
-				var x = pad + (i/(filled.length-1))*(W-pad*2);
-				var y = H-pad - ((v-1)/(9-1))*(H-pad*2);
-				return [x,y];
-			});
-
-			// Путь с кубическими безье
-			var path = 'M'+pts[0][0]+' '+pts[0][1];
-			for (var i=1;i<pts.length;i++) {
-				var cpx=(pts[i-1][0]+pts[i][0])/2;
-				path+=' C'+cpx+' '+pts[i-1][1]+' '+cpx+' '+pts[i][1]+' '+pts[i][0]+' '+pts[i][1];
-			}
-			var fill = path+' L'+pts[pts.length-1][0]+' '+H+' L'+pts[0][0]+' '+H+' Z';
-
-			svg.innerHTML =
-				'<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">'+
-				'<stop offset="0%" stop-color="#7c6aff" stop-opacity="0.4"/>'+
-				'<stop offset="100%" stop-color="#7c6aff" stop-opacity="0"/>'+
-				'</linearGradient></defs>'+
-				'<path d="'+fill+'" fill="url(#sg)"/>'+
-				'<path d="'+path+'" fill="none" stroke="#7c6aff" stroke-width="2" stroke-linecap="round"/>'+
-				pts.map(function(pt,i){
-					var real=values[i]!==null;
-					return '<circle cx="'+pt[0]+'" cy="'+pt[1]+'" r="'+(real?3.5:2)+'" fill="'+(real?'#7c6aff':'rgba(124,106,255,0.25)')+'"/>';
-				}).join('');
-
-			// Подписи дней
-			if (daysEl) daysEl.innerHTML = days.map(function(d){
-				return '<div class="sparkline-day">'+d.label+'</div>';
-			}).join('');
 		}
 
 		// ========== STREAK ==========
@@ -830,6 +755,7 @@
 
 		// ========== START ==========
 		buildCarousel();
+		updateOrbs();
 		updateStreak();
 		autoDetectLocation();   // геолокация запрашивается, в офлайне просто не сработает
 		loadServerData();
