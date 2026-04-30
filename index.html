@@ -431,6 +431,8 @@
 			staggerIndex++;
 			if (entryId) el.setAttribute('data-id', entryId);
 			var date = item.date;
+			// Нормализуем формат: "28.04.2026, 12:11" → "28.04.2026 12:11"
+    		if (typeof date === 'string') date = date.replace(',', '');
 			if (date instanceof Date) date = date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 			var locHtml = '';
 			if (item.location) {
@@ -639,6 +641,7 @@
 			for (var i = 0; i < allHistoryData.length; i++) {
 				var row = allHistoryData[i];
 				var dateStr = row[1];
+				var dateStr = row[1].replace(',', '');
 				var parts = dateStr.split(' ');
 				if (!parts[0]) continue;
 				var dayParts = parts[0].split('.');
