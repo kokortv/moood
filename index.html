@@ -171,19 +171,17 @@
 </div>
 
 <script>
-	// URL твоего Apps Script WebApp — вставь после деплоя
 	var API_URL = 'https://script.google.com/macros/s/AKfycbzJSXqYu7KW5euWznmHEtU41mIQ2poHNcTaYjBiM1chp-nJA0G_vYcg1uNxvs8Ih3J4zg/exec';
 
 	function apiGet(action) {
-	    return fetch(API_URL + '?action=' + action)
-	        .then(function(r) { 
-	            return r.text().then(function(text) {
-	                console.log('RAW response:', text);
-	                try { return JSON.parse(text); }
-	                catch(e) { console.error('JSON parse error:', e); return null; }
-	            });
-	        })
-	        .catch(function(err) { console.log('Fetch error:', err); return null; });
+		return fetch(API_URL + '?action=' + action)
+			.then(function(r) {
+				return r.text().then(function(text) {
+					try { return JSON.parse(text); }
+					catch(e) { console.error('JSON parse error:', e); return null; }
+				});
+			})
+			.catch(function(err) { console.log('Fetch error:', err); return null; });
 	}
 
 	function apiPost(body) {
@@ -222,6 +220,7 @@
 		var fullHistory = [];
 		var currentLimit = 10;
 		var loadMoreBtn = null;
+		var staggerIndex = 0; // ← перенесён сюда, во внешний scope
 
 		// DOM
 		var track = document.getElementById('emoji-track');
@@ -257,6 +256,11 @@
 				return m;
 			});
 		}
+		function normalizeDate(str) {
+			// "28.04.2026, 12:11" → "28.04.2026 12:11"
+			if (typeof str !== 'string') return str;
+			return str.replace(',', '').replace(/\s+/, ' ').trim();
+		}
 
 		// ========== CAROUSEL ==========
 		function buildCarousel() {
@@ -285,22 +289,21 @@
 			moodNameEl.textContent = MOODS[cur].name;
 		}
 		function saveCurrentMood() { localStorage.setItem('lastMoodIndex', cur); }
-		// Цвета орбов по настроению [orb1, orb2]
 		var ORB_COLORS = [
-			['rgba(255,80,80,0.18)',   'rgba(255,140,100,0.12)'],  // тревога
-			['rgba(255,140,60,0.15)',  'rgba(255,100,80,0.1)'],    // напряжение
-			['rgba(120,80,255,0.18)', 'rgba(200,80,255,0.12)'],   // хаос
-			['rgba(100,100,180,0.15)','rgba(80,180,200,0.1)'],    // нейтрально
-			['rgba(80,180,200,0.15)', 'rgba(100,200,160,0.1)'],   // спокойно
-			['rgba(124,106,255,0.18)','rgba(255,106,158,0.12)'],  // хорошо
-			['rgba(255,200,60,0.18)', 'rgba(255,140,60,0.15)'],   // отлично
-			['rgba(80,100,200,0.15)', 'rgba(100,80,180,0.1)'],    // устал
-			['rgba(60,100,180,0.15)', 'rgba(80,150,220,0.1)'],    // сонный
-			['rgba(255,160,80,0.18)', 'rgba(255,100,160,0.12)'],  // тронут
-			['rgba(200,60,80,0.18)',  'rgba(255,100,60,0.12)'],   // раздражение
-			['rgba(80,200,150,0.18)', 'rgba(100,220,255,0.12)'],  // вдохновение
-			['rgba(255,180,60,0.18)', 'rgba(200,120,255,0.12)'],  // тронут2
-			['rgba(100,180,255,0.18)','rgba(60,220,180,0.12)']    // доп
+			['rgba(255,80,80,0.18)',   'rgba(255,140,100,0.12)'],
+			['rgba(255,140,60,0.15)',  'rgba(255,100,80,0.1)'],
+			['rgba(120,80,255,0.18)', 'rgba(200,80,255,0.12)'],
+			['rgba(100,100,180,0.15)','rgba(80,180,200,0.1)'],
+			['rgba(80,180,200,0.15)', 'rgba(100,200,160,0.1)'],
+			['rgba(124,106,255,0.18)','rgba(255,106,158,0.12)'],
+			['rgba(255,200,60,0.18)', 'rgba(255,140,60,0.15)'],
+			['rgba(80,100,200,0.15)', 'rgba(100,80,180,0.1)'],
+			['rgba(60,100,180,0.15)', 'rgba(80,150,220,0.1)'],
+			['rgba(255,160,80,0.18)', 'rgba(255,100,160,0.12)'],
+			['rgba(200,60,80,0.18)',  'rgba(255,100,60,0.12)'],
+			['rgba(80,200,150,0.18)', 'rgba(100,220,255,0.12)'],
+			['rgba(255,180,60,0.18)', 'rgba(200,120,255,0.12)'],
+			['rgba(100,180,255,0.18)','rgba(60,220,180,0.12)']
 		];
 		function updateOrbs() {
 			var orb1 = document.querySelector('.orb1');
@@ -382,7 +385,7 @@
 		// ========== HISTORY RENDERING ==========
 		function renderHistoryItems() {
 			histList.innerHTML = '';
-			var staggerIndex = 0;
+			staggerIndex = 0; // ← сбрасываем внешнюю переменную
 			var offlineQueue = JSON.parse(localStorage.getItem('moodQueue') || '[]');
 			for (var i = offlineQueue.length - 1; i >= 0; i--) {
 				addToUI(offlineQueue[i], true, null);
@@ -424,15 +427,14 @@
 				if (loadMoreBtn) { loadMoreBtn.remove(); loadMoreBtn = null; }
 			}
 		}
+
 		function addToUI(item, isOffline, entryId) {
 			var el = document.createElement('div');
 			el.className = 'history-item';
 			el.style.animationDelay = (staggerIndex * 40) + 'ms';
 			staggerIndex++;
 			if (entryId) el.setAttribute('data-id', entryId);
-			var date = item.date;
-			// Нормализуем формат: "28.04.2026, 12:11" → "28.04.2026 12:11"
-    		if (typeof date === 'string') date = date.replace(',', '');
+			var date = normalizeDate(item.date);
 			if (date instanceof Date) date = date.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 			var locHtml = '';
 			if (item.location) {
@@ -454,6 +456,7 @@
 			if (editIcon && entryId) editIcon.addEventListener('click', function(e) { e.stopPropagation(); openEditModal(entryId, item.comment); });
 			if (delIcon && entryId) delIcon.addEventListener('click', function(e) { e.stopPropagation(); deleteEntryById(entryId, el); });
 		}
+
 		function updateCount() { histCount.textContent = histList.children.length; }
 		function setFullHistory(serverData) {
 			fullHistory = serverData || [];
@@ -536,13 +539,10 @@
 			var location = currentLocation || '';
 			var entry = { emoji: emoji, comment: comment, date: date, location: location };
 
-			// Анимация — эмодзи улетает вверх
 			var activeSlide = document.querySelector('.emoji-slide.active');
 			if (activeSlide) {
 				activeSlide.classList.add('emoji-launching');
-				setTimeout(function() {
-					activeSlide.classList.remove('emoji-launching');
-				}, 500);
+				setTimeout(function() { activeSlide.classList.remove('emoji-launching'); }, 500);
 			}
 			clearCommentDraft();
 			saveBtn.disabled = true;
@@ -640,12 +640,13 @@
 			var monthAgo = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
 			for (var i = 0; i < allHistoryData.length; i++) {
 				var row = allHistoryData[i];
-				var dateStr = row[1];
-				var dateStr = row[1].replace(',', '');
+				var dateStr = normalizeDate(row[1]); // ← единый нормализатор, без дублирующегося var
 				var parts = dateStr.split(' ');
 				if (!parts[0]) continue;
 				var dayParts = parts[0].split('.');
+				if (dayParts.length < 3) continue;
 				var itemDate = new Date(dayParts[2], dayParts[1] - 1, dayParts[0]);
+				if (isNaN(itemDate.getTime())) continue; // ← пропускаем невалидные даты
 				if (itemDate >= monthAgo) {
 					var em = row[2];
 					freq[em] = (freq[em] || 0) + 1;
@@ -658,7 +659,6 @@
 				cloudModal.classList.add('active');
 				return;
 			}
-			// subtitle
 			var totalCount = 0; for (var ek in freq) totalCount += freq[ek];
 			var sub = document.getElementById('cloud-subtitle');
 			if (sub) { var w=totalCount%10,h=totalCount%100; sub.textContent=totalCount+' '+(w===1&&h!==11?'запись':w>=2&&w<=4&&(h<10||h>=20)?'записи':'записей')+' за 30 дней'; }
@@ -745,14 +745,13 @@
 			});
 		}
 
-		// ========== LOAD SERVER DATA (with timeout for offline) ==========
+		// ========== LOAD SERVER DATA ==========
 		function loadServerData() {
 			if (!navigator.onLine) {
 				if (userNameSpan) userNameSpan.textContent = 'друг';
 				renderHistoryItems();
 				return;
 			}
-			// Таймаут 3 секунды, чтобы не зависнуть в офлайне (но мы уже проверили onLine)
 			var timeout = setTimeout(function() {
 				if (userNameSpan) userNameSpan.textContent = 'друг';
 				renderHistoryItems();
@@ -774,7 +773,7 @@
 				});
 		}
 
-		// ========== SERVICE WORKER REGISTRATION ==========
+		// ========== SERVICE WORKER ==========
 		if ('serviceWorker' in navigator) {
 			navigator.serviceWorker.register('./sw.js').catch(function(e) { console.log('SW:', e); });
 		}
@@ -783,7 +782,7 @@
 		buildCarousel();
 		updateOrbs();
 		updateStreak();
-		autoDetectLocation();   // геолокация запрашивается, в офлайне просто не сработает
+		autoDetectLocation();
 		loadServerData();
 	})();
 </script>
