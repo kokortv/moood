@@ -175,9 +175,15 @@
 	var API_URL = 'https://script.google.com/macros/s/AKfycbzJSXqYu7KW5euWznmHEtU41mIQ2poHNcTaYjBiM1chp-nJA0G_vYcg1uNxvs8Ih3J4zg/exec';
 
 	function apiGet(action) {
-		return fetch(API_URL + '?action=' + action)
-			.then(function(r) { return r.json(); })
-			.catch(function() { return null; });
+	    return fetch(API_URL + '?action=' + action)
+	        .then(function(r) { 
+	            return r.text().then(function(text) {
+	                console.log('RAW response:', text);
+	                try { return JSON.parse(text); }
+	                catch(e) { console.error('JSON parse error:', e); return null; }
+	            });
+	        })
+	        .catch(function(err) { console.log('Fetch error:', err); return null; });
 	}
 
 	function apiPost(body) {
